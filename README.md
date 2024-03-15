@@ -1,22 +1,62 @@
 # Log Tools
-Tools to help analyze logs
+Tools to help analyze log files from various engine control units
 
-## summarize-logs
+
+## Supported ECUs
+All tools support the following ECUs:
+* Haltech NSP (Experimental)
+
+Please [open a new
+issue](https://github.com/mspiegle/log-tools/issues/new) with a log file
+to request support for additional ECUs.  The log file should contain as
+many channels as possible.
+
+
+## Requirements
+Tools should be run through a command-line shell like `PowerShell` or
+`cmd.exe`.  They are tested on a 64-bit Intel PC running Windows 11.
+There is a good chance the pre-made binaries (.exe) will run on similar
+systems.  If it doesn't work, you have a few options:
+* [Open a new issue](https://github.com/mspiegle/log-tools/issues/new)
+  and request help
+* Download the uberjar version run it with Java8 or newer, this may work
+  on Mac and Linux
+* [Install leiningen](https://leiningen.org/) and try to build your own
+  jar by running `lein uberjar` within `apps/summarize-logs`
+
+
+## Downloading
+[Download your preferred version from
+GitHub](https://github.com/mspiegle/log-tools/releases).  Most people
+will want the latest Windows 64 native release like
+`log-tools-0.1.0_windows64-native.zip`.  If you're using Mac or Linux,
+try the uberjar.
+
+
+## Installing & Running
+If you want the best user experience:
+* Download a native release
+* Unzip the file
+* Put the binaries (.exe files) in a directory
+* Make sure the directory is part of your `Path` (I use `C:\Users\<your
+  username>\bin`)
+* Open a shell (typically `PowerShell` or `cmd.exe`)
+* Navigate to your log directory: `cd /path/to/log/files`
+* Run the tool: `summarize-logs.exe --help`
+
+
+## Tools
+
+### summarize-logs
 Summarize your log files with statistical functions
 
-### Requirements
-You need to have Java installed for this to work.  It should work with
-Java8 and newer which means almost any version of Java is fine.  NOTE
-that this tool is command-line only.  You'll need to open `PowerShell`
-or `cmd.exe` to run it.
-
-### Usage
+#### Usage
 The workhorse of this tool is the `--op` argument.  You can summarize
 the channels of your log file with a statistical function and optionally
 filter the results so you can find the log files you're looking for.
 Please run the tool with `--help` to see all options available:
 ```
-$ java -jar /path/to/summarize-logs.jar --help
+> summarize-logs.exe --help
 
  summarize-logs: Summarize log files with statistics
 
@@ -34,7 +74,8 @@ $ java -jar /path/to/summarize-logs.jar --help
    -o, --op OPSPEC:   Perform operation and include result in output,
                       at least 1 required, more details below
 
-   -a, --all:         Only show file in output if all filters pass
+   -a, --all:         Only show file in output if all filters are
+                      matched
 
    -U, --long-units:  When parsing files, convert values into the
                       units the ECU's software would typically show
@@ -89,10 +130,9 @@ $ java -jar /path/to/summarize-logs.jar --help
    =: Equal to
 ```
 
-### Example 1: Summarize logs by highest knock count seen in each log
+#### Example 1: Summarize logs by highest knock count seen in each log
 ```
-$ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count)"
-LogFiles
+> summarize-logs.exe -o "max(Knock Sensor 1 Knock Count)" LogDir
 +----------+----------------------------+-----------+-------+
 | Filename | Channel                    | Statistic | Value |
 +----------+----------------------------+-----------+-------+
@@ -103,10 +143,9 @@ LogFiles
 +----------+----------------------------+-----------+-------+
 ```
 
-### Example 2: Summarize by knock count, but only show files with knocks
+#### Example 2: Summarize by knock count, but only show logs with knocks
 ```
-$ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count) >
-0" LogFiles
+> summarize-logs.exe -o "max(Knock Sensor 1 Knock Count) > 0" LogDir
 +----------+----------------------------+-----------+-------+
 | Filename | Channel                    | Statistic | Value |
 +----------+----------------------------+-----------+-------+
@@ -114,62 +153,67 @@ $ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count) >
 +----------+----------------------------+-----------+-------+
 ```
 
-### Example 3: Find logs that start with the engine off
+#### Example 3: Find logs that start with the engine off
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
-LogFiles
-+----------+---------------------+-----------+--------+
-| Filename | Channel             | Statistic | Value  |
-+----------+---------------------+-----------+--------+
-| Log1.csv | Engine Running Time | first     | 0      |
-| Log2.csv | Engine Running Time | first     | 0      |
-| Log3.csv | Engine Running Time | first     | 0      |
-+----------+---------------------+-----------+--------+
+> summarize-logs.exe -o "first(Engine Running Time) = 0" LogDir
++----------+---------------------+-----------+-------+
+| Filename | Channel             | Statistic | Value |
++----------+---------------------+-----------+-------+
+| Log1.csv | Engine Running Time | first     | 0     |
+| Log2.csv | Engine Running Time | first     | 0     |
+| Log3.csv | Engine Running Time | first     | 0     |
++----------+---------------------+-----------+-------+
 ```
 
-Just because the first entry in the log indicates that the engine is
-off, does not mean that the engine was ever started while you were
-logging.  You can use the `last` statistic to see this.  Note how
-`Log2.csv` has `0` runtime at the start and end of the log:
+The above example shows logs where the engine was off at the start.  We
+can also see if the engine was running at the end using the `last`
+statistic.  Note how `Log2.csv` has `0` runtime at the start and end of
+the log:
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
-LogFiles
-+----------+---------------------+-----------+--------+
-| Filename | Channel             | Statistic | Value  |
-+----------+---------------------+-----------+--------+
-| Log1.csv | Engine Running Time | first     | 0      |
-| Log1.csv | Engine Running Time | last      | 1234   |
-| Log2.csv | Engine Running Time | first     | 0      |
-| Log2.csv | Engine Running Time | last      | 0      |
-| Log3.csv | Engine Running Time | first     | 0      |
-| Log3.csv | Engine Running Time | last      | 98765  |
-+----------+---------------------+-----------+--------+
+> summarize-logs.exe -o "first(Engine Running Time) = 0" `
+                     -o "last(Engine Running Time)" `
+                     LogDir
++----------+---------------------+-----------+-------+
+| Filename | Channel             | Statistic | Value |
++----------+---------------------+-----------+-------+
+| Log1.csv | Engine Running Time | first     | 0     |
+| Log1.csv | Engine Running Time | last      | 1234  |
+| Log2.csv | Engine Running Time | first     | 0     |
+| Log2.csv | Engine Running Time | last      | 0     |
+| Log3.csv | Engine Running Time | first     | 0     |
+| Log3.csv | Engine Running Time | last      | 98765 |
++----------+---------------------+-----------+-------+
 ```
 
 What if you only wanted to see files where `Engine Running Time`
 increased between the first and last log entry?  You can use the `-a`
-option which adds an implicit `AND` condition between all filters:
+option which adds an implicit `AND` condition between all filters.  This
+means that all filters must match for a file to show up in the output:
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
---op "last(Engine Running Time) > 0" -a LogFiles
-LogFiles
-+----------+---------------------+-----------+--------+
-| Filename | Channel             | Statistic | Value  |
-+----------+---------------------+-----------+--------+
-| Log1.csv | Engine Running Time | first     | 0      |
-| Log1.csv | Engine Running Time | last      | 1234   |
-| Log3.csv | Engine Running Time | first     | 0      |
-| Log3.csv | Engine Running Time | last      | 98765  |
-+----------+---------------------+-----------+--------+
+> summarize-logs.exe -o "first(Engine Running Time) = 0" `
+                     -o "last(Engine Running Time) > 0" `
+                     -a LogDir
++----------+---------------------+-----------+-------+
+| Filename | Channel             | Statistic | Value |
++----------+---------------------+-----------+-------+
+| Log1.csv | Engine Running Time | first     | 0     |
+| Log1.csv | Engine Running Time | last      | 1234  |
+| Log3.csv | Engine Running Time | first     | 0     |
+| Log3.csv | Engine Running Time | last      | 98765 |
++----------+---------------------+-----------+-------+
 ```
 
-### Example 4: Interpreting the data with standard units
+#### Example 4: Interpreting the data with standard units
 By default, this tool will show you the raw values in the log files.
-Many ECUs will only log integers even if the value typically is a
-decimal.  You can see that below (NOTE: due to a limitation, many
-integers are interpreted as decimals with `.0` at the end):
+Sometimes the raw values won't make sense because the ECU logs them in
+such a way to maximize performance.  In the following example, most
+would expect `Target Lambda` to typically be between 0.5 and 1.5, but
+the ECU logs it as a large integer:
+
+<sub>NOTE: Due to a limitation, the raw values are often interpreted as
+decimals with `.0` at the end.  I hope to fix this in the future.</sub>
 ```
-$ java -jar summarize-logs.jar --op "min(Target Lambda)" LogFiles
+> summarize-logs.exe -o "min(Target Lambda)" LogDir
 +----------+---------------+-----------+--------+
 | Filename | Channel       | Statistic | Value  |
 +----------+---------------+-----------+--------+
@@ -180,10 +224,10 @@ $ java -jar summarize-logs.jar --op "min(Target Lambda)" LogFiles
 +----------+---------------+-----------+--------+
 ```
 
-There is an experimental `-U` feature for some supported ECUs that will
-attempt to convert the raw value into a human readable format:
+There is an experimental `-U` feature for some ECUs that will attempt to
+convert the raw value into a human-friendly format:
 ```
-$ java -jar summarize-logs.jar --op "min(Target Lambda)" -U LogFiles
+> summarize-logs.exe -o "min(Target Lambda)" -U LogDir
 +----------+---------------+-----------+--------+--------+
 | Filename | Channel       | Statistic | Value  | Units  |
 +----------+---------------+-----------+--------+--------+
@@ -194,12 +238,10 @@ $ java -jar summarize-logs.jar --op "min(Target Lambda)" -U LogFiles
 +----------+---------------+-----------+--------+--------+
 ```
 
-Here's an example for Manifold Pressure.  NOTE that it is converting the
-raw value, and interpreting it as "gauge" pressure because that is what
-the tuning software would show by default.  First, here's the raw
-version:
+Here's an example for Manifold Pressure.  Notice the large numbers in
+the raw version:
 ```
-$ java -jar summarize-logs.jar --op "max(Manifold Pressure)" LogFiles
+> summarize-logs.exe -o "max(Manifold Pressure)" LogDir
 +----------+-------------------+-----------+--------+
 | Filename | Channel           | Statistic | Value  |
 +----------+-------------------+-----------+--------+
@@ -210,15 +252,16 @@ $ java -jar summarize-logs.jar --op "max(Manifold Pressure)" LogFiles
 +----------+-------------------+-----------+--------+
 ```
 
-Here's the converted version as kPa gauge pressure:
+Add `-U` to see the converted version.  It's showing kPa gauge pressure
+since that's the default for that ECU's tuning software:
 ```
-$ java -jar summarize-logs.jar --op "max(Manifold Pressure)" -U LogFiles
-+----------+-------------------+-----------+-------+------------+
-| Filename | Channel           | Statistic | Value | Units      |
-+----------+-------------------+-----------+-------+------------+
-| Log1.csv | Manifold Pressure | max       | 81.5  | Kilopascal |
-| Log2.csv | Manifold Pressure | max       | -10.0 | Kilopascal |
-| Log3.csv | Manifold Pressure | max       | 66.6  | Kilopascal |
-| Log4.csv | Manifold Pressure | max       | 50.5  | Kilopascal |
-+----------+-------------------+-----------+-------+------------+
+> summarize-logs.exe -o "max(Manifold Pressure)" -U LogDir
++----------+-------------------+-----------+-------+--------------------+
+| Filename | Channel           | Statistic | Value | Units              |
++----------+-------------------+-----------+-------+--------------------+
+| Log1.csv | Manifold Pressure | max       | 81.5  | Kilopascal (Gauge) |
+| Log2.csv | Manifold Pressure | max       | -10.0 | Kilopascal (Gauge) |
+| Log3.csv | Manifold Pressure | max       | 66.6  | Kilopascal (Gauge) |
+| Log4.csv | Manifold Pressure | max       | 50.5  | Kilopascal (Gauge) |
++----------+-------------------+-----------+-------+--------------------+
 ```
