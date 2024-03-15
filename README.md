@@ -19,18 +19,18 @@ There is a good chance the pre-made binaries (.exe) will run on similar
 systems.  If it doesn't work, you have a few options:
 * [Open a new issue](https://github.com/mspiegle/log-tools/issues/new)
   and request help
-* Download the .jar version and try running it with Java8 or newer -
-  this may even work on Mac and Linux
+* Download the uberjar version run it with Java8 or newer, this may work
+  on Mac and Linux
 * [Install leiningen](https://leiningen.org/) and try to build your own
-  jar by running `lein uberjar`
+  jar by running `lein uberjar` within `apps/summarize-logs`
 
 
 ## Downloading
-[Grab your preferred release from
+[Download your preferred version from
 GitHub](https://github.com/mspiegle/log-tools/releases).  Most people
 will want the latest Windows 64 native release like
-`log-tools-0.1.0_windows64-native.zip`.  If you're running on Mac or
-Linux, try the uberjar.
+`log-tools-0.1.0_windows64-native.zip`.  If you're using Mac or Linux,
+try the uberjar.
 
 
 ## Installing & Running
@@ -38,11 +38,11 @@ If you want the best user experience:
 * Download a native release
 * Unzip the file
 * Put the binaries (.exe files) in a directory
-* Make sure the directory is part of your `Path` (I typically use
-  `C:\Users\<your username>\bin`)
+* Make sure the directory is part of your `Path` (I use `C:\Users\<your
+  username>\bin`)
 * Open a shell (typically `PowerShell` or `cmd.exe`)
-* Navigate to your log directory (`cd /path/to/log/files`)
-* Run the tool (`summarize-logs.exe --help`)
+* Navigate to your log directory: `cd /path/to/log/files`
+* Run the tool: `summarize-logs.exe --help`
 
 
 ## Tools
@@ -74,7 +74,8 @@ Please run the tool with `--help` to see all options available:
    -o, --op OPSPEC:   Perform operation and include result in output,
                       at least 1 required, more details below
 
-   -a, --all:         Only show file in output if all filters pass
+   -a, --all:         Only show file in output if all filters are
+                      matched
 
    -U, --long-units:  When parsing files, convert values into the
                       units the ECU's software would typically show
@@ -208,6 +209,9 @@ Sometimes the raw values won't make sense because the ECU logs them in
 such a way to maximize performance.  In the following example, most
 would expect `Target Lambda` to typically be between 0.5 and 1.5, but
 the ECU logs it as a large integer:
+
+<sub>NOTE: Due to a limitation, the raw values are often interpreted as
+decimals with `.0` at the end.  I hope to fix this in the future.</sub>
 ```
 > summarize-logs.exe -o "min(Target Lambda)" LogDir
 +----------+---------------+-----------+--------+
@@ -219,9 +223,6 @@ the ECU logs it as a large integer:
 | Log4.csv | Target Lambda | min       | 871.0  |
 +----------+---------------+-----------+--------+
 ```
-<sub>NOTE: Due to a limitation, the raw values are often interpreted as
-decimals with `.0` at the end.  I hope to fix this in the future.</sub>
-
 
 There is an experimental `-U` feature for some ECUs that will attempt to
 convert the raw value into a human-friendly format:
@@ -237,8 +238,8 @@ convert the raw value into a human-friendly format:
 +----------+---------------+-----------+--------+--------+
 ```
 
-Here's an example for Manifold Pressure.  First, here's the raw
-version with huge numbers:
+Here's an example for Manifold Pressure.  Notice the large numbers in
+the raw version:
 ```
 > summarize-logs.exe -o "max(Manifold Pressure)" LogDir
 +----------+-------------------+-----------+--------+
@@ -251,8 +252,8 @@ version with huge numbers:
 +----------+-------------------+-----------+--------+
 ```
 
-Here's the converted version.  It's showing kPa gauge pressure since
-that's the default for that ECU's tuning software:
+Add `-U` to see the converted version.  It's showing kPa gauge pressure
+since that's the default for that ECU's tuning software:
 ```
 > summarize-logs.exe -o "max(Manifold Pressure)" -U LogDir
 +----------+-------------------+-----------+-------+--------------------+
