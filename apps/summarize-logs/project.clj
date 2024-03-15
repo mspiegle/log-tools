@@ -15,5 +15,6 @@
                  "../../libs/ecu/src"]
   :main summarize-logs.main
   :target-path "target/%s"
+  :global-vars {*warn-on-reflection* true}
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})

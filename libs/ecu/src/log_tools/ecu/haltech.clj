@@ -3,7 +3,8 @@
             [clojure.string :as string]
             [log-tools.core :as core]
             [tech.v3.dataset :as ds]
-            [clojure.set :as cs]))
+            [clojure.set :as cs])
+  (:import [java.io BufferedReader]))
 
 
 (defn parse-metadata
@@ -274,7 +275,7 @@
                     (when (and native-units type-info)
                       {:parser-fn (parser-fn-map type-info header)}))]
 
-    (with-open [reader (io/reader (io/input-stream file))]
+    (with-open [^BufferedReader reader (io/reader (io/input-stream file))]
       ; Skip the header lines, then parse as regular CSV into dataset
       (dotimes [_ (:header-lines header)] (.readLine reader))
       (ds/->dataset reader ds-opts))))
@@ -905,7 +906,7 @@
 
    "Pressure"
    ["kPa"
-    "Kilopascal"
+    "Kilopascal (Gauge)"
     :float32
     #(- (divide-by-10 %) 101)]
 

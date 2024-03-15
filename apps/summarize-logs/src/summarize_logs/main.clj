@@ -7,6 +7,7 @@
             [tech.v3.datatype.statistics :as dts]
             [table.core :as table]
             [com.climate.claypoole :as cp])
+  (:import [java.io File])
   (:gen-class))
 
 
@@ -279,6 +280,14 @@
 
 
 (defn process-file
+  "file is java.io.File or string filename.
+  parser is a function that returns a dataset.
+  operations is seq of map with keys:
+  [:channel,
+  :statistic,
+  :comparison,
+  :threshold]
+  opts is map of {:show-units ?}"
   [file parser operations {:keys [show-units]}]
   (let [channels (map :channel operations)
         opts     (merge
@@ -289,28 +298,26 @@
                      {:native-units true}))
         dataset  (parser file opts)]
     (merge
+      ; If the dataset returned units, include them
+      (select-keys dataset [:units])
+      ; Parsed file result
       {:file
        file
 
        :stats
-       (->> (for [{:keys [channel
-                          statistic
-                          comparison
-                          threshold]}
-                  operations]
-              (let [stat-fn (get statistic-map statistic)
-                    column  (get-in dataset [:dataset channel])]
-                (when (and stat-fn column)
-                  (merge
-                    {:channel   channel
-                     :statistic statistic
-                     :value     (stat-fn column)}
-                    (when (and comparison threshold)
-                      {:filter [comparison threshold]})))))
-            ; Unknown columns result in nils
-            (remove nil?))}
-      (when (contains? dataset :units)
-        {:units (:units dataset)}))))
+       (for [{:keys [channel statistic comparison threshold]} operations]
+         (let [stat-fn (get statistic-map statistic)
+               column  (get-in dataset [:dataset channel])]
+           (merge
+             {:channel   channel
+              :statistic statistic
+              ; If this file doesn't have the requested column, we
+              ; return a nil because we still need to support downstream
+              ; filtering
+              :value     (when (and stat-fn column)
+                           (stat-fn column))}
+             (when (and comparison threshold)
+               {:filter [comparison threshold]}))))})))
 
 
 (defn process-files
@@ -320,7 +327,7 @@
   (cp/pfor
     (or threadpool :serial)
     ; Process each file in a separate thread
-    [[file parser] file-parsers]
+    [[^File file parser] file-parsers]
     (let [opts (select-keys ctx [:show-units])]
       (try
        ; Only process files with valid parsers
@@ -336,20 +343,28 @@
 (defn filter-stat
   "Input stat:
   {:statistic \"max\"
-   :channel   \"RPM\"
-   :value     123
-   :filter    [f 999]}
+  :channel   \"RPM\"
+  :value     123
+  :filter    [f 999]}
 
   Output is input plus :filter? key:
   {:statistic \"max\"
-   :channel   \"RPM\"
-   :value     123
-   :filter    [> 999]
-   :filter?   true}"
+  :channel   \"RPM\"
+  :value     123
+  :filter    [> 999]
+  :filter?   true}"
   [{:keys [value] [comparison threshold] :filter :as stat}]
-  (if (and value comparison threshold)
-    (assoc stat :filter? (comparison value threshold))
-    (assoc stat :filter? true)))
+  (assoc
+    stat
+    :filter?
+    (if (some? value)
+      (if (and comparison threshold)
+        ; If there's a filter, allow row if it passes filter
+        (comparison value threshold)
+        ; If there's no filter, always allow row
+        true)
+      ; If there is no value, reject row
+      false)))
 
 
 (defn filter-result
@@ -375,7 +390,7 @@
    [filename channel statistic value]]
 
   Output only includes rows where stat had (true? :filter?):"
-  [{:keys [no-path? show-units]} {:keys [file stats units]}]
+  [{:keys [no-path? show-units]} {:keys [^File file stats units]}]
   (let [fname     (if no-path?
                     (.getName file)
                     (.getPath file))
@@ -420,7 +435,7 @@
   ([paths recurse?]
    (filter
      ; Only include files in result
-     #(.isFile %)
+     #(.isFile ^File %)
      (reduce
        (fn [result path]
          (let [f (io/file path)]
@@ -559,11 +574,17 @@
   (let [start-ms     (core/timestamp-now-ms)
         file-parsers (get-parsers-for-files (:files ctx))]
     (cond->> file-parsers
+      ; Multithreaded processing of files
       true              (process-files ctx)
+      ; Remove results that didn't parse properly
       true              (remove nil?)
+      ; Handle any filters
       true              (map filter-result)
+      ; AND filters together at the file
       (:all ctx)        (filter filter-file)
+      ; Standardize output units
       (:show-units ctx) (map cast-result)
+      ; Output results
       true              (print-table ctx))
 
     ; Show verbose output
