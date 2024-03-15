@@ -1,16 +1,22 @@
 # Log Tools
 Tools to help analyze logs
 
-## summarize-logs
+## Supported ECUs
+All tools should support the following ECUs:
+* Haltech NSP (Experimental)
+
+## Tools
+
+### summarize-logs
 Summarize your log files with statistical functions
 
-### Requirements
+#### Requirements
 You need to have Java installed for this to work.  It should work with
 Java8 and newer which means almost any version of Java is fine.  NOTE
 that this tool is command-line only.  You'll need to open `PowerShell`
 or `cmd.exe` to run it.
 
-### Usage
+#### Usage
 The workhorse of this tool is the `--op` argument.  You can summarize
 the channels of your log file with a statistical function and optionally
 filter the results so you can find the log files you're looking for.
@@ -89,10 +95,11 @@ $ java -jar /path/to/summarize-logs.jar --help
    =: Equal to
 ```
 
-### Example 1: Summarize logs by highest knock count seen in each log
+#### Example 1: Summarize logs by highest knock count seen in each log
 ```
-$ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count)"
-LogFiles
+$ java -jar summarize-logs.jar `
+    --op "max(Knock Sensor 1 Knock Count)" `
+    LogFiles
 +----------+----------------------------+-----------+-------+
 | Filename | Channel                    | Statistic | Value |
 +----------+----------------------------+-----------+-------+
@@ -103,10 +110,11 @@ LogFiles
 +----------+----------------------------+-----------+-------+
 ```
 
-### Example 2: Summarize by knock count, but only show files with knocks
+#### Example 2: Summarize by knock count, but only show files with knocks
 ```
-$ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count) >
-0" LogFiles
+$ java -jar summarize-logs.jar `
+    --op "max(Knock Sensor 1 Knock Count) > 0" `
+    LogFiles
 +----------+----------------------------+-----------+-------+
 | Filename | Channel                    | Statistic | Value |
 +----------+----------------------------+-----------+-------+
@@ -114,10 +122,11 @@ $ java -jar summarize-logs.jar --op "max(Knock Sensor 1 Knock Count) >
 +----------+----------------------------+-----------+-------+
 ```
 
-### Example 3: Find logs that start with the engine off
+#### Example 3: Find logs that start with the engine off
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
-LogFiles
+$ java -jar summarize-logs.jar `
+    --op "first(Engine Running Time) = 0" `
+    LogFiles
 +----------+---------------------+-----------+--------+
 | Filename | Channel             | Statistic | Value  |
 +----------+---------------------+-----------+--------+
@@ -132,8 +141,9 @@ off, does not mean that the engine was ever started while you were
 logging.  You can use the `last` statistic to see this.  Note how
 `Log2.csv` has `0` runtime at the start and end of the log:
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
-LogFiles
+$ java -jar summarize-logs.jar `
+    --op "first(Engine Running Time) = 0" `
+    LogFiles
 +----------+---------------------+-----------+--------+
 | Filename | Channel             | Statistic | Value  |
 +----------+---------------------+-----------+--------+
@@ -164,7 +174,7 @@ $ java -jar summarize-logs.jar `
 +----------+---------------------+-----------+--------+
 ```
 
-### Example 4: Interpreting the data with standard units
+#### Example 4: Interpreting the data with standard units
 By default, this tool will show you the raw values in the log files.
 Many ECUs will only log integers even if the value typically is a
 decimal.  You can see that below (NOTE: due to a limitation, many
