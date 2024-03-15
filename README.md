@@ -150,9 +150,10 @@ What if you only wanted to see files where `Engine Running Time`
 increased between the first and last log entry?  You can use the `-a`
 option which adds an implicit `AND` condition between all filters:
 ```
-$ java -jar summarize-logs.jar --op "first(Engine Running Time) = 0"
---op "last(Engine Running Time) > 0" -a LogFiles
-LogFiles
+$ java -jar summarize-logs.jar `
+    --op "first(Engine Running Time) = 0" `
+    --op "last(Engine Running Time) > 0" `
+    -a LogFiles
 +----------+---------------------+-----------+--------+
 | Filename | Channel             | Statistic | Value  |
 +----------+---------------------+-----------+--------+
