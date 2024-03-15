@@ -43,6 +43,7 @@ If you want the best user experience:
 * Open a shell (typically `PowerShell` or `cmd.exe`)
 * Navigate to your log directory: `cd /path/to/log/files`
 * Run the tool: `summarize-logs.exe --help`
+* If you get a missing DLL error, install the latest version of Java
 
 
 ## Tools
