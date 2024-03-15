@@ -1,20 +1,19 @@
 # Log Tools
-Tools to help analyze logs
+Tools to help analyze log files from various engine control units
 
 ## Supported ECUs
 All tools should support the following ECUs:
 * Haltech NSP (Experimental)
 
+## Requirements
+All tools require Java.  At least Java8 is required which means any
+modern version is supported.  These are command-line tools that require
+`PowerShell` or `cmd.exe` to run.
+
 ## Tools
 
 ### summarize-logs
 Summarize your log files with statistical functions
-
-#### Requirements
-You need to have Java installed for this to work.  It should work with
-Java8 and newer which means almost any version of Java is fine.  NOTE
-that this tool is command-line only.  You'll need to open `PowerShell`
-or `cmd.exe` to run it.
 
 #### Usage
 The workhorse of this tool is the `--op` argument.  You can summarize
