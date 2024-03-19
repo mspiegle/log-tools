@@ -18,6 +18,7 @@ log file.  The log file should contain as many channels as possible.
   program doesn't run, or you get missing DLL errors, install the
   latest:
   * [64-bit Windows](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+    (most common)
   * [32-bit Windows](https://aka.ms/vs/17/release/vc_redist.x86.exe)
 
 
