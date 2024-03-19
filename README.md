@@ -34,7 +34,8 @@ If you want the best user experience:
 * Download a native release
 * Unzip the file
 * Put the binaries (.exe files) in a directory
-* Make sure the directory is part of your `Path` (I use `C:\Users\<your
+* [Make sure the directory is part of your
+  Path](https://stackoverflow.com/q/44272416) (I use `C:\Users\<your
   username>\bin`)
 * Open a shell (like `PowerShell` or `cmd.exe`)
 * Navigate to your log directory: `cd /path/to/log/files`
