@@ -45,9 +45,9 @@ If you want the best user experience:
 
 ## Problems
 If something isn't working, please [open a new
-issue](https://github.com/mspiegle/log-tools/issues/new).  Please
-describe the problem in detail, the version of windows you're using, and
-screenshots of any errors you receive.
+issue](https://github.com/mspiegle/log-tools/issues/new).  Describe the
+problem in detail, the version of windows you're using, and screenshots
+of any errors you receive.
 
 
 ## Tools
@@ -278,9 +278,9 @@ to contribute.
 
 
 ### Software Stack
-* Clojure programming language
-* tech.ml.dataset (like Python Pandas on the JVM)
-* GraalVM for building native binaries
+* [Clojure](https://clojure.org/)
+* [tech.ml.dataset](https://github.com/techascent/tech.ml.dataset)
+* [GraalVM](https://www.graalvm.org/)
 
 
 ### Why Clojure?
