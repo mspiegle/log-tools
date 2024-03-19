@@ -6,31 +6,26 @@ Tools to help analyze log files from various engine control units
 All tools support the following ECUs:
 * Haltech NSP (Experimental)
 
-Please [open a new
-issue](https://github.com/mspiegle/log-tools/issues/new) with a log file
-to request support for additional ECUs.  The log file should contain as
-many channels as possible.
+To request support for a new ECU, please [open a new
+issue](https://github.com/mspiegle/log-tools/issues/new) with a sample
+log file.  The log file should contain as many channels as possible.
 
 
 ## Requirements
-Tools should be run through a command-line shell like `PowerShell` or
-`cmd.exe`.  They are tested on a 64-bit Intel PC running Windows 11.
-There is a good chance the pre-made binaries (.exe) will run on similar
-systems.  If it doesn't work, you have a few options:
-* [Open a new issue](https://github.com/mspiegle/log-tools/issues/new)
-  and request help
-* Download the uberjar version run it with Java8 or newer, this may work
-  on Mac and Linux
-* [Install leiningen](https://leiningen.org/) and try to build your own
-  jar by running `lein uberjar` within `apps/summarize-logs`
+* Windows 8.1 or later (Older versions may work, but untested)
+* Familiarity with command-line shell (like `PowerShell` or `cmd.exe`)
+* MSVC Runtime: This is already installed on many computers.  If the
+  program doesn't run, or you get missing DLL errors, install the
+  latest:
+  * [64-bit Windows](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+  * [32-bit Windows](https://aka.ms/vs/17/release/vc_redist.x86.exe)
 
 
 ## Downloading
-[Download your preferred version from
-GitHub](https://github.com/mspiegle/log-tools/releases).  Most people
-will want the latest Windows 64 native release like
-`log-tools-0.1.0_windows64-native.zip`.  If you're using Mac or Linux,
-try the uberjar.
+[Download the latest version from
+GitHub](https://github.com/mspiegle/log-tools/releases/latest).  Most
+people will want the Windows 64 native release.  If you're using Mac,
+Linux, or 32-bit Windows, then use the uberjar.
 
 
 ## Installing & Running
@@ -40,10 +35,17 @@ If you want the best user experience:
 * Put the binaries (.exe files) in a directory
 * Make sure the directory is part of your `Path` (I use `C:\Users\<your
   username>\bin`)
-* Open a shell (typically `PowerShell` or `cmd.exe`)
+* Open a shell (like `PowerShell` or `cmd.exe`)
 * Navigate to your log directory: `cd /path/to/log/files`
 * Run the tool: `summarize-logs.exe --help`
-* If you get a missing DLL error, install the latest version of Java
+* If you get a missing DLL error, install MSVC as described above
+
+
+## Problems
+If something isn't working, please [open a new
+issue](https://github.com/mspiegle/log-tools/issues/new).  Please
+describe the problem in detail, the version of windows you're using, and
+screenshots of any errors you receive.
 
 
 ## Tools
@@ -266,3 +268,33 @@ since that's the default for that ECU's tuning software:
 | Log4.csv | Manifold Pressure | max       | 50.5  | Kilopascal (Gauge) |
 +----------+-------------------+-----------+-------+--------------------+
 ```
+
+
+## Developers
+This section is for people who want to know more about the tools or how
+to contribute.
+
+
+### Software Stack
+* Clojure programming language
+* tech.ml.dataset (like Python Pandas on the JVM)
+* GraalVM for building native binaries
+
+
+### Why Clojure?
+Clojure has fantastic developer ergonomics especially for data
+processing applications.  GraalVM compiles the app as a native binary
+which minimizes startup time and provides a better user-facing
+experience.
+
+
+### Contributing
+[Fork the repo](https://github.com/mspiegle/log-tools/fork) and submit a
+pull request
+
+
+### Development Environment
+Local development should be as easy as [installing
+leiningen](https://leiningen.org/), then cloning the repo and getting to
+work.  I use NeoVim + Conjure for my development environment, but any
+Clojure-compatible IDE should work.
