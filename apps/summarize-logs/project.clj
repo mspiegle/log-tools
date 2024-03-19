@@ -1,4 +1,4 @@
-(defproject mspiegle/summarize-logs "0.1.0-SNAPSHOT"
+(defproject mspiegle/summarize-logs "0.2.0-SNAPSHOT"
   :min-lein-version "2.7.0"
   :parent-project {:path "../../project.clj"
                    :inherit [:managed-dependencies :url :license]}

@@ -202,17 +202,38 @@
 
 (defn detect-nsp
   "Receives a java file object and returns boolean if the file matches
-  the expected type"
+  the expected type.  ECU Manager logs follow roughly teh same format,
+  so we allow those logs here as well."
   [file]
-  (string/includes? (core/sniff-file file 128) "Haltech NSP"))
+  (or
+    ; Haltech NSP Logs
+    (string/includes?
+      (core/sniff-file file 128)
+      "Software : Haltech NSP")
+
+    ; ECU Manager Logs
+    (string/includes?
+      (core/sniff-file file 128)
+      "Software : ECU Manager")
+
+    ; ESP Logs
+    (string/includes?
+      (core/sniff-file file 128)
+      "Software : Haltech ESP")))
 
 
 (defn nsp-parse-header
   [filename]
-  (with-open [reader (io/reader (io/input-stream filename))]
-    (-> reader
-        (line-seq)
-        (nsp-header-parser))))
+  (try
+    (with-open [reader (io/reader (io/input-stream filename))]
+      (-> reader
+          (line-seq)
+          (nsp-header-parser)))
+    (catch clojure.lang.ExceptionInfo _
+      (throw
+        (ex-info
+          "Failed to parse file header"
+          {:file filename})))))
 
 
 (defn column-id->channel-name
@@ -790,11 +811,23 @@
     :float32
     divide-by-10]
 
+   "Acceleration"
+   ["m/s²"
+    "Meters Per Second Per Second"
+    :float64
+    divide-by-10]
+
    "Angle"
    ["°"
     "Degrees BTDC"
     :float64
     divide-by-10]
+
+   "AngleIgnSprt2K"
+   ["Raw"
+    "Raw"
+    :int64
+    identity]
 
    "AngularVelocity"
    ["°/s"
@@ -829,32 +862,56 @@
    "EngineSpeed"
    ["RPM"
     "RPM"
-    :uint32
+    :int64
     identity]
 
    "EngineVolume"
    ["cc"
     "Cubic Centimeters"
-    :uint16
+    :int32
     identity]
 
    "Flow"
    ["cc/min"
     "Cubic Centimeters Per Minute"
-    :uint16
+    :int32
     identity]
 
    "Frequency"
    ["Hz"
     "Hertz"
-    :uint32
+    :int64
     identity]
+
+   "FuelEcomony"
+   ["L/100km"
+    "Liters Per 100 Kilometers"
+    :float64
+    divide-by-100]
+
+   "FuelEconomy"
+   ["L/100km"
+    "Liters Per 100 Kilometers"
+    :float64
+    divide-by-100]
 
    "FuelVolume"
    ["L"
     "Liters"
     :float32
     divide-by-100]
+
+   "Gear"
+   ["Gear"
+    "Gear"
+    :int32
+    identity]
+
+   "GearRatio"
+   ["Raw"
+    "Raw"
+    :int64
+    identity]
 
    "InjFuelVolume"
    ["μL"
@@ -873,6 +930,12 @@
     "Grams Per Cylinder"
     :float32
     divide-by-1000]
+
+   "Mileage"
+   ["km/L"
+    "Kilimeters Per Liter"
+    :float32
+    divide-by-100]
 
    "PercentPerEngineCycle"
    ["%/ECyc"
@@ -904,14 +967,32 @@
     :float64
     divide-by-10]
 
+   "Percentage1For1"
+   ["%"
+    "Percent"
+    :int32
+    identity]
+
+   "Position"
+   ["Position"
+    "Position"
+    :int32
+    identity]
+
    "Pressure"
    ["kPa"
     "Kilopascal (Gauge)"
     :float32
     #(- (divide-by-10 %) 101)]
 
+   "PulsesPerLongDistance"
+   ["Pulses/km"
+    "Pulses Per Kilometer"
+    :int32
+    identity]
+
    "Ratio"
-   [""
+   ["Ratio"
     "Ratio"
     :float32
     divide-by-1000]
@@ -919,13 +1000,31 @@
    "Raw"
    ["Raw"
     "Raw"
-    :uint32
+    :int64
     identity]
 
    "Resistance"
    ["Ω"
     "Ohms"
     :float64
+    divide-by-10]
+
+   "ShortDistance"
+   ["m"
+    "Meters"
+    :float64
+    divide-by-10]
+
+   "ShorterDistance"
+   ["mm"
+    "Millimeters"
+    :float32
+    divide-by-100]
+
+   "Speed"
+   ["km/h"
+    "Kilometers Per Hour"
+    :float32
     divide-by-10]
 
    "Stoichiometry"
@@ -943,7 +1042,7 @@
    "Time_ms"
    ["ms"
     "Milliseconds"
-    :uint32
+    :int64
     identity]
 
    "Time_ms_as_s"
@@ -962,7 +1061,13 @@
    ["ms"
     "Milliseconds"
     :float64
-    divide-by-1000]})
+    divide-by-1000]
+
+   "Voltage"
+   ["v"
+    "Volts"
+    :float32
+    divide-by-100]})
 
 
 (defn convert-value
@@ -1006,8 +1111,8 @@
         [c-name [(first t-info) (second t-info) (nth t-info 2)]]))))
 
 
-(defn parse
-  "Parse java.io.File as Haltech Log.  Returns map of parsed data.
+(defn parse-nsp
+  "Parse java.io.File as Haltech NSP Log.  Returns map of parsed data.
   Opts is a map of the following keys:
   |-----------------+------------+-----------------------------------|
   | key             | type       | description                       |
@@ -1021,24 +1126,29 @@
 
   Shape of return map is:
   {:dataset <parsed dataset>
-   ; Only returned when (true? :native-units)
+  ; Only returned when (true? :native-units)
    :units   {\"Channel-1\": [\"String Unit\", \"String Description\"],
-             \"Channel-N\": [\"String Unit\", \"String Description\"]}}"
+             \"Channel-N\": [\"String Unit\", \"String Description\"]}}
+
+  If there was a parsing error, returned map is:
+  {:error <exception>}"
   ([file]
-   (parse file {}))
+   (parse-nsp file {}))
 
   ([file {:keys [parse-channels native-units] :as opts}]
-   (let [header (nsp-parse-header file)
-         opts   (merge
-                  {}
-                  (when parse-channels
-                    {:parse-channels parse-channels})
+   (try
+     (let [header (nsp-parse-header file)
+           opts   (merge
+                    {}
+                    (when parse-channels
+                      {:parse-channels parse-channels})
 
-                  (when (true? native-units)
-                    {:native-units true
-                     :type-info    type-info}))
-         ds     (nsp->dataset file header opts)]
-     (merge
-       {:dataset ds}
-       (when (true? native-units)
-         {:units (header->units type-info header)})))))
+                    (when (true? native-units)
+                      {:native-units true
+                       :type-info    type-info}))]
+       (merge
+         {:dataset (nsp->dataset file header opts)}
+         (when (true? native-units)
+           {:units (header->units type-info header)})))
+     (catch clojure.lang.ExceptionInfo e
+       {:error e}))))

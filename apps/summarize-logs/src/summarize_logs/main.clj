@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :as cli]
             [log-tools.core :as core]
-            [log-tools.ecu.haltech :as haltech]
+            [log-tools.ecu :as ecu]
             [tech.v3.datatype.statistics :as dts]
             [table.core :as table]
             [com.climate.claypoole :as cp])
@@ -299,8 +299,8 @@
                      {:native-units true}))
         dataset  (parser file opts)]
     (merge
-      ; If the dataset returned units, include them
-      (select-keys dataset [:units])
+      ; If the dataset returned units or errors, include them
+      (select-keys dataset [:units :error])
       ; Parsed file result
       {:file
        file
@@ -472,21 +472,6 @@
                        :name "summarize-logs"))})))
 
 
-(defn get-parsers-for-files
-  "Takes a seq of java.io.File and returns:
-  [java.io.File parser-function]"
-  [files]
-  (let [priority [[haltech/detect-nsp haltech/parse]]
-        detect-f (fn detect-f
-                   [file]
-                   (let [f (fn [[detect-f parse-f]]
-                             (if (detect-f file)
-                               [file parse-f]
-                               [file nil]))]
-                     (some f priority)))]
-    (map detect-f files)))
-
-
 (comment
   ; Example args with multiple stats
   (def args
@@ -541,29 +526,31 @@
               (assoc
                 stat
                 :value
-                (condp = t
-                  ; need 16 bit int container
-                  :uint8   (short value)
-                  :int16   (short value)
-                  :short   (short value)
-                  ; need 32 bit int container
-                  :uint16  (int value)
-                  :int32   (int value)
-                  :int     (int value)
-                  ; need 64 bit int container
-                  :uint32  (long value)
-                  :int64   (long value)
-                  :long    (long value)
-                  ; need 32 bit floating point container
-                  :float32 (float value)
-                  :float   (float value)
-                  ; need 64 bit floating point container
-                  :float64 (double value)
-                  :double  (double value)
-                  ; other containers
-                  :string  (str value)
-                  ; default
-                  (identity value)))))]
+                (if (nil? value)
+                  value
+                  (condp = t
+                    ; need 16 bit int container
+                    :uint8   (short value)
+                    :int16   (short value)
+                    :short   (short value)
+                    ; need 32 bit int container
+                    :uint16  (int value)
+                    :int32   (int value)
+                    :int     (int value)
+                    ; need 64 bit int container
+                    :uint32  (long value)
+                    :int64   (long value)
+                    :long    (long value)
+                    ; need 32 bit floating point container
+                    :float32 (float value)
+                    :float   (float value)
+                    ; need 64 bit floating point container
+                    :float64 (double value)
+                    :double  (double value)
+                    ; other containers
+                    :string  (str value)
+                    ; default
+                    (identity value))))))]
     {:file  file
      :stats (map f stats)
      :units units}))
@@ -572,13 +559,14 @@
 (defn summarize-logs
   "Process files and display output based on instructions in ctx"
   [ctx]
-  (let [start-ms     (core/timestamp-now-ms)
-        file-parsers (get-parsers-for-files (:files ctx))]
-    (cond->> file-parsers
-      ; Multithreaded processing of files
-      true              (process-files ctx)
+  (let [start-ms        (core/timestamp-now-ms)
+        file-parsers    (ecu/resolve-parsers (:files ctx))
+        processed-files (process-files ctx file-parsers)]
+    (cond->> processed-files
       ; Remove results that didn't parse properly
       true              (remove nil?)
+      ; Remove results with errors
+      true              (remove #(contains? % :error))
       ; Handle any filters
       true              (map filter-result)
       ; AND filters together at the file
@@ -590,16 +578,22 @@
 
     ; Show verbose output
     (when (:verbose? ctx)
-      (let [duration-ms (- (core/timestamp-now-ms) start-ms)
-            count-files (count (:files ctx))
-            no-parser   (-> (group-by #(nil? (last %)) file-parsers)
-                            (get true))]
+      (let [duration-ms  (- (core/timestamp-now-ms) start-ms)
+            count-files  (count (:files ctx))
+            not-detected (-> (group-by #(nil? (last %)) file-parsers)
+                             (get true))
+            parse-error  (filter #(contains? % :error) processed-files)]
         (printf "Processing Time: %d ms\n" duration-ms)
         (printf "Total Files: %d\n" count-files)
-        (when-let [failed-files (seq no-parser)]
-          (println "Unparsable Files:")
-          (doseq [[filename _] failed-files]
+        (when-let [failures (seq not-detected)]
+          (println "Unable to detect file type:")
+          (doseq [[filename _] failures]
             (printf " - %s\n" filename)))
+        (println)
+        (when-let [failures (seq parse-error)]
+          (println "Unable to parse files:")
+          (doseq [{:keys [error]} failures]
+            (printf " - %s\n" (-> error ex-data :file))))
         (println)))))
 
 
