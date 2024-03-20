@@ -4,7 +4,9 @@ Tools to help analyze log files from various engine control units
 
 ## Supported ECUs
 All tools support the following ECUs:
-* Haltech NSP (Experimental)
+* Haltech NSP
+* Haltech ESP (Experimental)
+* Haltech ECU Manager (Experimental)
 
 To request support for a new ECU, please [open a new
 issue](https://github.com/mspiegle/log-tools/issues/new) with a sample
