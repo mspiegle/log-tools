@@ -1,4 +1,4 @@
-(defproject mspiegle/log-tools "0.1.0-SNAPSHOT"
+(defproject mspiegle/log-tools "0.2.0-SNAPSHOT"
   :description "A set of tools for analyzing log files"
   :url "https://github.com/mspiegle/log-tools"
   :license {:name "Apache-2.0"
